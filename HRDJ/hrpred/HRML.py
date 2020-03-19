@@ -10,7 +10,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 import pickle
 import os
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score
 
 df = pd.read_csv('turnover.csv')
@@ -27,6 +26,8 @@ def training (df):
     dummyRow = pd.DataFrame(np.zeros(len(X.columns)).reshape(1,len(X.columns)), columns=X.columns) #creates this for test prediction.
     dummyRow.to_csv("dummyRow.csv", index=False)
 
+
+
     model = RandomForestClassifier(bootstrap=True, ccp_alpha=0.0, class_weight=None,
                        criterion='gini', max_depth=None, max_features='auto',
                        max_leaf_nodes=None, max_samples=None,
@@ -38,12 +39,19 @@ def training (df):
 
     #Split the dataset (using smote sampled data).
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    smote = SMOTE()
+    X_train, y_train = smote.fit_sample(X_train,y_train.ravel())
 
     model.fit(X_train,y_train)
 
     pickle_file = "pickle_model.pkl"
     with open (pickle_file, 'wb') as file: #wb - write/open file in binary mode.
         pickle.dump(model,file)
+
+    pickle_smote_file = "pickle_smote.pkl"
+    with open (pickle_smote_file, 'wb') as file: #wb - write/open file in binary mode.
+        pickle.dump(model,file)
+
 
 
     #Test Results
@@ -62,9 +70,9 @@ def training (df):
     print(f"Classification Report: \n \tPrecision: {precision_score(y_test, test_pred)}\n\tRecall Score: {recall_score(y_test, test_pred)}\n\tF1 score: {f1_score(y_test, test_pred)}\n")
     print(f"Confusion Matrix: \n {confusion_matrix(y_test, test_pred)}\n")
 
-    print ("Attrition",sum(test_pred!=0))
-    print ("Stayed", sum(test_pred==0))
-#   
+    print ("Attrition Label:1",sum(test_pred!=0))
+    print ("Attrition Label:0", sum(test_pred==0))
+# #   
     
 def pred(ob):
     d1 = ob.to_dict() #convert object into dictionary and create a df.
@@ -78,9 +86,13 @@ def pred(ob):
         df2[c1]=df[c1]
    #Load the pickled model.
     pickle_filename = "pickle_model.pkl"
-    #pickle_filename=os.path.dirname(__file__)+"/"+pickle_filename 
     with open (pickle_filename, 'rb') as file:
         model = pickle.load(file) 
+    
+    pickle_smote_file = "pickle_smote.pkl"
+    with open (pickle_smote_file, 'rb') as file:
+        model = pickle.load(file) 
+    
     pred = model.predict(df2)
     return pred
 
